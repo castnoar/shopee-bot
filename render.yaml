@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: shopee-afiliado-bot
+    env: node
+    buildCommand: npm install
+    startCommand: node index.js
+    envVars:
+      - key: SHOPEE_EMAIL
+        sync: false
+      - key: SHOPEE_PASSWORD
+        sync: false
