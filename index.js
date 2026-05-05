@@ -1,6 +1,4 @@
 const express = require('express');
-const puppeteer = require('puppeteer');
-
 const app = express();
 app.use(express.json());
 
@@ -14,7 +12,6 @@ app.get('/', (req, res) => {
 app.get('/converter', async (req, res) => {
   const { url } = req.query;
   if (!url) return res.status(400).json({ error: 'Parâmetro url é obrigatório' });
-
   try {
     const linkConvertido = await converterLink(url);
     res.json({ link: linkConvertido });
@@ -25,41 +22,42 @@ app.get('/converter', async (req, res) => {
 });
 
 async function converterLink(url) {
+  const puppeteer = require('puppeteer-core');
+  const chromium = require('@sparticuz/chromium');
   const browser = await puppeteer.launch({
-    headless: 'new',
-    args: ['--no-sandbox', '--disable-setuid-sandbox']
+    args: chromium.args,
+    defaultViewport: chromium.defaultViewport,
+    executablePath: await chromium.executablePath(),
+    headless: chromium.headless,
   });
   try {
     const page = await browser.newPage();
-    await page.goto('https://affiliate.shopee.com.br/account/login', { waitUntil: 'networkidle2' });
-
+    await page.goto('https://affiliate.shopee.com.br/account/login', { waitUntil: 'networkidle2', timeout: 30000 });
     const jaLogado = await page.$('.header-user');
     if (!jaLogado) {
       await page.type('input[name="loginKey"]', SHOPEE_EMAIL);
       await page.type('input[name="password"]', SHOPEE_PASSWORD);
       await page.click('button[type="submit"]');
-      await page.waitForNavigation({ waitUntil: 'networkidle2' });
+      await page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 30000 });
     }
-
-    await page.goto('https://affiliate.shopee.com.br/offer/custom_link', { waitUntil: 'networkidle2' });
-    await page.waitForSelector('textarea');
+    await page.goto('https://affiliate.shopee.com.br/offer/custom_link', { waitUntil: 'networkidle2', timeout: 30000 });
+    await page.waitForSelector('textarea', { timeout: 10000 });
     await page.evaluate((linkUrl) => {
       document.querySelector('textarea').value = linkUrl;
       document.querySelector('textarea').dispatchEvent(new Event('input', { bubbles: true }));
     }, url);
-
-    await page.click('button[type="submit"]');
-    await page.waitForTimeout(3000);
-
+    await page.waitForTimeout(1000);
+    const btn = await page.$('button[type="submit"]');
+    if (btn) await btn.click();
+    await page.waitForTimeout(4000);
     const linkGerado = await page.evaluate(() => {
-      const elementos = document.querySelectorAll('input[readonly], .generated-link, .copy-link');
+      const elementos = document.querySelectorAll('input[readonly], input[type="text"]');
       for (const el of elementos) {
         const val = el.value || el.textContent;
-        if (val && val.includes('shopee')) return val.trim();
+        if (val && (val.includes('s.shopee') || val.includes('shope.ee'))) return val.trim();
       }
       return null;
     });
-
     if (!linkGerado) throw new Error('Não foi possível extrair o link');
     return linkGerado;
   } finally {
