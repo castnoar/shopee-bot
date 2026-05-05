@@ -8,7 +8,7 @@ app.get('/', (req, res) => {
   res.send('Bot Shopee Afiliados rodando! ✅');
 });
 
-app.get('/converter', async (req, res) => {
+app.post('/converter', async (req, res) => {
   const { url } = req.query;
   if (!url) return res.status(400).json({ error: 'url obrigatório' });
 
