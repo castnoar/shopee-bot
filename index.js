@@ -2,6 +2,8 @@ const express = require('express');
 const https = require('https');
 const app = express();
 
+const AF_ID = process.env.SHOPEE_AF_ID;
+
 app.get('/', (req, res) => {
   res.send('Bot Shopee Afiliados rodando! ✅');
 });
@@ -11,11 +13,9 @@ app.get('/converter', async (req, res) => {
   if (!url) return res.status(400).json({ error: 'url obrigatório' });
 
   try {
-    // Expande o link curto primeiro
     const linkFinal = await expandirLink(url);
-    // Adiciona o ID de afiliado
     const separator = linkFinal.includes('?') ? '&' : '?';
-    const linkAfiliado = linkFinal + separator + 'af_id=' + process.env.SHOPEE_AF_ID;
+    const linkAfiliado = linkFinal + separator + 'utm_source=' + AF_ID + '&mmp_pid=' + AF_ID;
     res.json({ link: linkAfiliado });
   } catch (err) {
     res.status(500).json({ error: err.message });
